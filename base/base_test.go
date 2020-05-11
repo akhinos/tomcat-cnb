@@ -139,6 +139,7 @@ export JAVA_OPTS="${JAVA_OPTS} -Daccess.logging.enabled=true"
 
 			it("contributes logging support", func() {
 				b, _, err := base.NewBase(f.Build)
+				os.Setenv("CLASSPATH", "")
 				g.Expect(err).NotTo(gomega.HaveOccurred())
 
 				g.Expect(b.Contribute()).To(gomega.Succeed())
@@ -149,7 +150,23 @@ export JAVA_OPTS="${JAVA_OPTS} -Daccess.logging.enabled=true"
 				g.Expect(filepath.Join(layer.Root, "bin", "setenv.sh")).To(test.HavePermissions(0755))
 				g.Expect(filepath.Join(layer.Root, "bin", "setenv.sh")).To(test.HaveContent(fmt.Sprintf(`#!/bin/sh
 
-CLASSPATH=%s`, destination)))
+CLASSPATH="%s"`, destination)))
+			})
+
+			it("contributes logging support with CLASSPATH from previous layer", func() {
+				b, _, err := base.NewBase(f.Build)
+				os.Setenv("CLASSPATH", "/layers/some-layer/archive.jar:/usr/local")
+				g.Expect(err).NotTo(gomega.HaveOccurred())
+
+				g.Expect(b.Contribute()).To(gomega.Succeed())
+
+				layer := f.Build.Layers.Layer("catalina-base")
+				destination := filepath.Join(layer.Root, "bin", "stub-tomcat-logging-support.jar")
+				g.Expect(destination).To(gomega.BeAnExistingFile())
+				g.Expect(filepath.Join(layer.Root, "bin", "setenv.sh")).To(test.HavePermissions(0755))
+				g.Expect(filepath.Join(layer.Root, "bin", "setenv.sh")).To(test.HaveContent(fmt.Sprintf(`#!/bin/sh
+
+CLASSPATH="%s:%s"`, "/layers/some-layer/archive.jar", destination)))
 			})
 
 			it("contributes temporary directory", func() {
