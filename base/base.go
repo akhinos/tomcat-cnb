@@ -206,6 +206,27 @@ func (b Base) contributeLifecycleSupport(layer layers.Layer) error {
 	return helper.CopyFile(artifact, filepath.Join(layer.Root, "lib", filepath.Base(artifact)))
 }
 
+func (b Base) adaptClasspath(newClasspath string) string {
+	cp := os.Getenv("CLASSPATH")
+
+	parts := strings.Split(cp, ":")
+
+	filteredCP := ""
+
+	for _, part := range parts {
+
+		if strings.HasPrefix(part, "/layers") {
+			filteredCP = fmt.Sprintf("%s:%s", part, filteredCP)
+		}
+	}
+	if strings.HasSuffix(filteredCP, ":") {
+		filteredCP = filteredCP[0 : len(filteredCP)-1]
+	}
+
+	return fmt.Sprintf("%s:%s", filteredCP, newClasspath)
+
+}
+
 func (b Base) contributeLoggingSupport(layer layers.Layer) error {
 	layer.Logger.Header("Contributing Logging Support")
 
@@ -222,9 +243,12 @@ func (b Base) contributeLoggingSupport(layer layers.Layer) error {
 	}
 
 	layer.Logger.Body("Writing %s/bin/setenv.sh", layer.Root)
+
+	classpath := b.adaptClasspath(destination)
+
 	return helper.WriteFile(filepath.Join(layer.Root, "bin", "setenv.sh"), 0755, `#!/bin/sh
 
-CLASSPATH="$CLASSPATH:%s"`, destination)
+CLASSPATH="%s"`, classpath)
 }
 
 func (Base) contributeTemporaryDirectory(layer layers.Layer) error {
