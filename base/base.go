@@ -206,27 +206,22 @@ func (b Base) contributeLifecycleSupport(layer layers.Layer) error {
 	return helper.CopyFile(artifact, filepath.Join(layer.Root, "lib", filepath.Base(artifact)))
 }
 
-func (b Base) adaptClasspath(newClasspath string, layer layers.Layer) string {
-	classpath := os.Getenv("CLASSPATH")
+func (b Base) adaptClasspath(classpath string, layer layers.Layer) string {
+	existingClasspath := os.Getenv("CLASSPATH")
 
-	parts := strings.Split(classpath, ":")
-
-	filteredCP := ""
+	parts := strings.Split(existingClasspath, ":")
+	classPathFragments := make([]string, 0)
 
 	for _, part := range parts {
 
 		layer.Logger.Body("Checking classpath fragment %s", part)
-
 		if strings.HasPrefix(part, "/layers") {
-			filteredCP = fmt.Sprintf("%s:%s", part, filteredCP)
+			classPathFragments = append(classPathFragments, part)
 		}
 	}
-	if strings.HasSuffix(filteredCP, ":") {
-		filteredCP = filteredCP[0 : len(filteredCP)-1]
-	}
+	classPathFragments = append(classPathFragments, classpath)
 
-	return fmt.Sprintf("%s:%s", filteredCP, newClasspath)
-
+	return strings.Join(classPathFragments, ":")
 }
 
 func (b Base) contributeLoggingSupport(layer layers.Layer) error {
