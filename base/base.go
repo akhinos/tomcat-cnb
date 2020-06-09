@@ -206,24 +206,6 @@ func (b Base) contributeLifecycleSupport(layer layers.Layer) error {
 	return helper.CopyFile(artifact, filepath.Join(layer.Root, "lib", filepath.Base(artifact)))
 }
 
-func (b Base) adaptClasspath(classpath string, layer layers.Layer) string {
-	existingClasspath := os.Getenv("CLASSPATH")
-
-	parts := strings.Split(existingClasspath, ":")
-	classPathFragments := make([]string, 0)
-
-	for _, part := range parts {
-
-		layer.Logger.Body("Checking classpath fragment %s", part)
-		if strings.HasPrefix(part, "/layers") {
-			classPathFragments = append(classPathFragments, part)
-		}
-	}
-	classPathFragments = append(classPathFragments, classpath)
-
-	return strings.Join(classPathFragments, ":")
-}
-
 func (b Base) contributeLoggingSupport(layer layers.Layer) error {
 	layer.Logger.Header("Contributing Logging Support")
 
@@ -241,11 +223,16 @@ func (b Base) contributeLoggingSupport(layer layers.Layer) error {
 
 	layer.Logger.Body("Writing %s/bin/setenv.sh", layer.Root)
 
-	classpath := b.adaptClasspath(destination, layer)
-
 	return helper.WriteFile(filepath.Join(layer.Root, "bin", "setenv.sh"), 0755, `#!/bin/sh
-
-CLASSPATH="%s"`, classpath)
+OLD_CLASSPATH="$CLASSPATH"
+CLASSPATH="%s"
+for PART in $(echo $OLD_CLASSPATH | sed -e 's/:/ /g'); do
+	case $PART in
+	/layers/*) CLASSPATH="$CLASSPATH:$PART";;
+	esac
+done
+echo "Using CLASSPATH: $CLASSPATH"
+`, destination)
 }
 
 func (Base) contributeTemporaryDirectory(layer layers.Layer) error {
