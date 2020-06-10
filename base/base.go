@@ -228,7 +228,7 @@ OLD_CLASSPATH="$CLASSPATH"
 CLASSPATH="%s"
 for PART in $(echo $OLD_CLASSPATH | sed -e 's/:/ /g'); do
 	case $PART in
-	/layers/*) CLASSPATH="$CLASSPATH:$PART";;
+	/layers/org.cloudfoundry.jdbc/*) CLASSPATH="$CLASSPATH:$PART";;
 	esac
 done
 echo "Using CLASSPATH: $CLASSPATH"
